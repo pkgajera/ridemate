@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+.mainHeader a.active {
+    color: #76091f;
+    font-weight: 700;
+}
+
+.sidebarMenu a.active {
+    background-color: #76091f;
+    color: #fff;
+}
+
+button,
+button:focus {
+    outline: none;
+}
+
+.input-no-spinner {
+    -moz-appearance: textfield;
+    /* Firefox */
+}
+
+.input-no-spinner::-webkit-outer-spin-button,
+.input-no-spinner::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+
+/* Marker CSS */
+.map-pin {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    background: red;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.pin-inner {
+    transform: rotate(45deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: white;
+}
+
+.userOwn {
+    background: blue;
+}
+
+.pin-inner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
