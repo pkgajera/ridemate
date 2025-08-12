@@ -18,7 +18,6 @@ const UserListContent = ({ users, selectedUser, setSelectedUser, isMobileMenuOpe
             <div className="w-full p-2 py-4 border-b border-gray-300 flex flex-col gap-3">
                 <div className="w-full flex justify-between items-center">
                     <h1 className="text-lg sm:text-xl font-bold">Messages</h1>
-                    {/* <button className="cursor-pointer md:hidden" onClick={() => setIsMobileMenuOpen(false)}><IoClose fontSize={24} /></button> */}
                 </div>
                 <div className="w-full relative">
                     <IoSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -111,6 +110,7 @@ const Chat = () => {
     const [loading, setLoading] = useState(false);
     const [loadingMessages, setLoadingMessages] = useState(false);
     const [showScrollButton, setShowScrollButton] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
 
     const sendMessage = (e) => {
         e.preventDefault();
@@ -147,26 +147,45 @@ const Chat = () => {
         }
     }
 
-    const fetchMessages = async () => {
+    const fetchMessages = async (before = null) => {
         try {
             setLoadingMessages(true);
-            const response = await axios.get(`${userBackendUrl}/api/user/getMessages`, {
-                headers: { Authorization },
-                params: {
-                    user1: currentUserId,
-                    user2: selectedUser?._id,
-                },
-            });
+
+            const params = {
+                user1: currentUserId,
+                user2: selectedUser?._id,
+            }
+
+            if (before) {
+                params.before = before
+            }
+
+            const response = await axios.get(`${userBackendUrl}/api/user/getMessages`, { headers: { Authorization }, params });
 
             if (response.data.status) {
                 setLoadingMessages(false)
-                setMessages(response.data.data);
+                const newMessages = response.data.data;
+                setMessages(prev => [...newMessages, ...prev]);
+
+                if (newMessages.length < 20) {
+                    setHasMore(false); // No more messages to fetch
+                }
                 socket.send(
                     JSON.stringify({
                         type: "MARK_READ",
                         fromUserId: selectedUser?._id,
                     })
                 );
+
+                const temp = [...users];
+                const filtered = temp?.map((val) => {
+                    if (val?._id === selectedUser?._id) {
+                        return { ...val, unread: 0 }
+                    } else {
+                        return val;
+                    }
+                })
+                setUsers(filtered)
             }
         } catch (error) {
             sendMessage([])
@@ -174,44 +193,6 @@ const Chat = () => {
             console.log(error?.message);
         }
     };
-
-    // useEffect(() => {
-    //     const decoded = decodeJWT(Authorization)
-    //     setCurrentUserId(decoded._id);
-
-    //     const Socket = new WebSocket(import.meta.env.VITE_SOCKET_URL, Authorization);
-
-    //     Socket.onopen = () => {
-    //         const subscribeMessage = { type: "SUBSCRIBE" };
-
-    //         Socket.send(JSON.stringify(subscribeMessage))
-    //         setSocket(Socket);
-    //         console.log("Connection established");
-    //     }
-
-    //     Socket.onmessage = (event) => {
-    //         let message = JSON.parse(event.data);
-
-    //         if (message.type === 'PING') {
-    //             Socket.send(JSON.stringify({ type: 'PONG' }))
-    //         } else if (message.type === 'MESSAGE') {
-    //             setMessages((prev) => [
-    //                 ...prev, message.message]);
-    //         }
-    //     }
-
-    //     return () => {
-    //         if (Socket && Socket.readyState === WebSocket.OPEN) {
-    //             const unSubscribeMessage = {
-    //                 type: "UNSUBSCRIBE",
-    //             };
-
-    //             Socket.send(JSON.stringify(unSubscribeMessage));
-
-    //             Socket.close();
-    //         }
-    //     }
-    // }, [])
 
     useEffect(() => {
         const decoded = decodeJWT(Authorization);
@@ -222,10 +203,16 @@ const Chat = () => {
         const handleScroll = () => {
             if (!container) return;
 
-            const isAtBottom =
-                container.scrollHeight - container.scrollTop <= container.clientHeight + 10;
+            const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 10;
 
             setShowScrollButton(!isAtBottom);
+
+            if (container.scrollTop === 0 && hasMore) {
+                const oldestMessage = messages[0];
+                if (oldestMessage) {
+                    fetchMessages(oldestMessage.createdAt);
+                }
+            }
         };
 
         container?.addEventListener('scroll', handleScroll);
@@ -234,7 +221,6 @@ const Chat = () => {
 
         Socket.onopen = () => {
             setSocket(Socket);
-            console.log("Connection established");
         };
 
         Socket.onmessage = (event) => {
@@ -247,8 +233,22 @@ const Chat = () => {
                 Socket.send(JSON.stringify({ type: 'PONG' }));
             } else if (message.type === 'MESSAGE') {
                 setMessages((prev) => [...prev, message.message]);
-            } else {
-                console.log("Received message:", message);
+
+                setUsers((prevConversations) => {
+                    const index = prevConversations.findIndex(c => c._id === message.message.from || c._id === message.message.to);
+                    let updated = [...prevConversations];
+
+                    if (index !== -1) {
+                        const conv = { ...updated[index] };
+                        conv.lastMessage = message.message.text;
+                        conv.timestamp = message.message.timestamp;
+                        conv.unread = conv.unread + 1;
+                        updated.splice(index, 1);
+                        updated.unshift(conv);
+                    }
+
+                    return updated;
+                });
             }
         };
 
@@ -256,9 +256,7 @@ const Chat = () => {
             container?.removeEventListener('scroll', handleScroll);
 
             if (Socket && Socket.readyState === WebSocket.OPEN) {
-                const unSubscribeMessage = {
-                    type: "UNSUBSCRIBE",
-                };
+                const unSubscribeMessage = { type: "UNSUBSCRIBE" };
 
                 Socket.send(JSON.stringify(unSubscribeMessage));
                 Socket.close();
@@ -281,12 +279,10 @@ const Chat = () => {
     const messagesEndRef = useRef(null);
     const messagesContainerRef = useRef(null);
 
-    // Scroll to bottom function
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    // Run scroll when messages update
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
@@ -308,7 +304,6 @@ const Chat = () => {
 
             {(!Object.values(selectedUser).length || isMobileMenuOpen) && (
                 <div className="fixed inset-0 z-50 md:hidden w-full mt-18" style={{ height: 'calc(100vh - 72px)' }}>
-                    {/* <div className="absolute w-full h-full inset-0 bg-black/50 -z-1" onClick={() => setIsMobileMenuOpen(false)}></div> */}
                     <div className="w-full h-full z-1000">
                         <UserListContent
                             users={users}
@@ -363,9 +358,6 @@ const Chat = () => {
                                         </div>
                                         <div className="min-w-0">
                                             <h2 className="font-semibold text-lg truncate">{selectedUser.name}</h2>
-                                            {/* <p className="text-xs sm:text-sm text-muted-foreground">
-                                                {selectedUser.online ? "Online" : "Last seen 2h ago"}
-                                            </p> */}
                                         </div>
                                     </div>
                                 </div>
@@ -402,7 +394,6 @@ const Chat = () => {
                                 <div ref={messagesEndRef} />
                             </div>
 
-                            {/* Floating scroll button */}
                             {showScrollButton && (
                                 <button
                                     onClick={scrollToBottom}

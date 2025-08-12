@@ -280,17 +280,14 @@ exports.fetchNearbyUsers = async (req, res) => {
         const currentWorkLeaveEnd = currentWorkLeave.clone().add(30, 'minutes');
 
         // Find users near home
-        const referenceUser = await User.findById(userId).select('homeLocation workplaceLocation');
+        // const currentUser = await User.findById(userId).select('homeLocation workplaceLocation');
 
-        if (
-            !referenceUser?.homeLocation?.coordinates ||
-            !referenceUser?.workplaceLocation?.coordinates
-        ) {
-            throw new Error('Reference user location data missing.');
+        if (!currentUser?.homeLocation?.coordinates || !currentUser?.workplaceLocation?.coordinates) {
+            return res.status(404).json({ status: false, message: "Your location details not found." })
         }
 
-        const [refHomeLng, refHomeLat] = referenceUser.homeLocation.coordinates;
-        const [refWorkLng, refWorkLat] = referenceUser.workplaceLocation.coordinates;
+        const [refHomeLng, refHomeLat] = currentUser.homeLocation.coordinates;
+        const [refWorkLng, refWorkLat] = currentUser.workplaceLocation.coordinates;
 
         // Step 2: Find users near provided coordinates (not reference user)
         const nearbyUsers = await User.find({
@@ -313,7 +310,11 @@ exports.fetchNearbyUsers = async (req, res) => {
         const nearbyUserIds = nearbyUsers.map((user) => user._id);
 
         if (nearbyUserIds.length === 0) {
-            return [];
+            return res.status(200).json({
+                status: true,
+                message: "Nearby users matching both commute windows found.",
+                data: []
+            });
         }
 
         // Step 3: Compute distances using aggregation
@@ -598,7 +599,7 @@ exports.getConversations = async (req, res) => {
         // 1. Get the user and their connections
         const user = await User.findById(userId).lean();
         if (!user || !user.connections || user.connections.length === 0) {
-            return res.json([]);
+            return res.json({ status: true });
         }
 
         const connections = await User.find({ _id: { $in: user.connections } })
@@ -681,19 +682,25 @@ exports.getConversations = async (req, res) => {
 
 exports.getMessages = async (req, res) => {
     try {
-        const { user1, user2 } = req.query;
+        const { user1, user2, before, limit = 20 } = req.query;
 
-        const messages = await Chat.find({
+        const query = {
             $or: [
                 { from: user1, to: user2 },
                 { from: user2, to: user1 },
             ],
-        }).sort({ createdAt: 1 });
+        }
+
+        if (before) {
+            query.createdAt = { $lt: new Date(before) };
+        }
+
+        const messages = await Chat.find(query).sort({ createdAt: -1 }).limit(limit);
 
         return res.status(200).json({
             status: true,
             messages: "Messages fetched successfully.",
-            data: messages?.length ? messages : []
+            data: messages?.length ? messages.reverse() : []
         })
     } catch (error) {
         return res.status(500).json({ status: false, message: error?.message })

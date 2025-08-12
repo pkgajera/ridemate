@@ -10,10 +10,6 @@ const setUpSocket = () => {
     wss.on('connection', (ws, req) => {
         ws.isAlive = true;
 
-        ws.on('pong', () => {
-            ws.isAlive = true;
-        });
-
         const token = req.headers['sec-websocket-protocol'];
         if (!token) {
             ws.send(JSON.stringify({ message: "Validation failed." }));
@@ -140,10 +136,12 @@ const setUpSocket = () => {
     setInterval(() => {
         wss.clients.forEach((ws) => {
             if (!ws.isAlive) {
+                ws.send(JSON.stringify({ type: "DISCONNECTED", message: "Disconnected due to inactivity." }))
                 return ws.terminate();
             }
 
             ws.send(JSON.stringify({ type: "PING" }));
+            ws.isAlive = false;
         });
     }, 30000);
 };
