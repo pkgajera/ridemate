@@ -11,6 +11,7 @@ import { decodeJWT, genders, seatingCapacity, stepOneSchema, stepThreeSchema, st
 import { useAuth } from '../context/AllContext';
 import { OlaMaps } from 'olamaps-web-sdk';
 import axios from 'axios';
+import { PiUploadSimpleBold } from "react-icons/pi";
 
 const Profile = () => {
 
@@ -37,8 +38,10 @@ const Profile = () => {
         }
     ];
     const [step, setStep] = useState(0);
-    const [isEdit, setIsEdit] = useState(false);
+    const [isEdit, setIsEdit] = useState(true);
     const [isVehicle, setIsVehicle] = useState(false);
+
+    const [previewUrl, setPreviewUrl] = useState(null);
 
     const [homeAddressSuggestions, setHomeAddressSuggestions] = useState([]);
     const [workplaceAddressSuggestions, setWorkplaceAddressSuggestions] = useState([]);
@@ -89,6 +92,7 @@ const Profile = () => {
     const workplaceLongitude = watch('workplaceLongitude')
     const homeStreetAddress = watch('homeStreetAddress')
     const workplaceStreetAddress = watch('workplaceStreetAddress')
+    const profilePic = watch('profilePic')
 
     const next = async () => {
         if (isEdit) {
@@ -102,43 +106,6 @@ const Profile = () => {
     }
 
     const back = () => setStep((s) => Math.max(s - 1, 0));
-
-    // const handleSaveProfile = async (data) => {
-    //     try {
-    //         if (!isEdit) {
-    //             return toast.warn("Click on edit profile to edit profile details.")
-    //         }
-
-    //         const decoded = decodeJWT(Authorization)
-    //         const userId = decoded?._id || ''
-
-    //         const formValues = getValues();
-    //         const formData = new FormData();
-
-    //         console.log(Object.entries(formValues), 'formValues');
-
-    //         for (const [key, value] of Object.entries(formValues)) {
-    //             if (value instanceof File) {
-    //                 formData.append(key, value);
-    //             } else if (key === 'profilePic' && typeof value === 'string') {
-    //                 formData.append('existingProfilePic', value); // existing image string
-    //             } else if (typeof value === 'object' && value !== null) {
-    //                 formData.append(key, JSON.stringify(value));
-    //             } else if (value !== undefined) {
-    //                 formData.append(key, value);
-    //             }
-    //         }
-
-    //         const response = await axios.post(`${userBackendUrl}/api/user/update-profile/${userId}`, formData, { headers: { Authorization } });
-
-    //         if (response.data.status) {
-    //             toast.success('Profile details updated successfully.');
-    //             setIsEdit(false)
-    //         }
-    //     } catch (error) {
-    //         error?.response && toast.error(error?.response?.data?.message);
-    //     }
-    // }
 
     const handleSaveProfile = async (data) => {
         try {
@@ -174,7 +141,6 @@ const Profile = () => {
 
             if (response.data.status) {
                 toast.success('Profile details updated successfully.');
-                setIsEdit(false);
             }
         } catch (error) {
             error?.response && toast.error(error?.response?.data?.message);
@@ -184,13 +150,11 @@ const Profile = () => {
 
     const fetchHomeAddressesSuggestions = async () => {
         try {
-            console.log("Hello");
             const params = {
                 api_key: olaMapApiKey,
                 input: homeStreetAddress
             }
             const response = await axios.get(`${olaMapApi}/places/v1/autocomplete`, { params });
-            console.log("Response : ", response);
             if (response.data.status) {
                 setLoadingHomeAddresses(false)
                 setHomeAddressSuggestions(response.data.predictions)
@@ -284,6 +248,18 @@ const Profile = () => {
     }, []);
 
     useEffect(() => {
+        if (typeof profilePic === 'string') {
+            setPreviewUrl(`${userBackendUrl}/images/${profilePic}`);
+        } else if (profilePic instanceof File) {
+            const objectUrl = URL.createObjectURL(profilePic);
+            setPreviewUrl(objectUrl);
+            return () => URL.revokeObjectURL(objectUrl); // Clean up
+        } else {
+            setPreviewUrl(null);
+        }
+    }, [profilePic, userBackendUrl]);
+
+    useEffect(() => {
         if (step === 2 && homeLatitude && homeLongitude && document.getElementById('homeLocationMap')) {
             const mymap = olaMaps.init({
                 style: "https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json",
@@ -371,21 +347,9 @@ const Profile = () => {
                             <span className='text-[#76091f]/70 truncate text-sm md:text-base'>Manage your account information</span>
                         </div>
                         <div className='flex justify-end items-center gap-3'>
-                            {
-                                isEdit ?
-                                    <>
-                                        <button className='flex justify-center items-center gap-2 border border-[#76091f] hover:bg-[#76091f] hover:text-white text-[#76091f] p-2 md:px-5 rounded-lg cursor-pointer hover:opacity-90' onClick={() => setIsEdit(false)}>
-                                            <IoClose fontSize={20} /><span className='hidden md:block truncate'>Cancel</span>
-                                        </button>
-                                        <button className='flex justify-center items-center gap-2 border border-[#76091f] bg-[#76091f] text-white p-2 md:px-5 rounded-lg cursor-pointer hover:opacity-90' onClick={handleSubmit(handleSaveProfile)}>
-                                            <BiSolidSave fontSize={20} /><span className='hidden md:block truncate'>Save</span>
-                                        </button>
-                                    </>
-                                    :
-                                    <button className='flex justify-center items-center gap-3 border border-[#76091f] bg-[#76091f] text-white p-2 md:px-5 rounded-lg cursor-pointer hover:opacity-90' onClick={() => setIsEdit(true)}>
-                                        <FiEdit3 fontSize={20} /><span className='hidden md:block truncate'>Edit Profile</span>
-                                    </button>
-                            }
+                            <button className='flex justify-center items-center gap-2 border border-[#76091f] bg-[#76091f] text-white p-2 md:px-5 rounded-lg cursor-pointer hover:opacity-90' onClick={handleSubmit(handleSaveProfile)}>
+                                <BiSolidSave fontSize={20} /><span className='hidden md:block truncate'>Save</span>
+                            </button>
                         </div>
                     </div>
                     <div className='w-full border-b border-b-gray-200 flex justify-center items-center p-3 shadow'>
@@ -455,18 +419,30 @@ const Profile = () => {
                                     </div>
                                     <div className='w-full flex flex-col gap-1.5 sm:col-span-2'>
                                         <span className='text-gray-400 text-xs sm:text-sm'>Upload profile pic</span>
-                                        <input
-                                            // {...register('profilePic')}
-                                            type="file"
-                                            accept="image/*"
-                                            disabled={!isEdit}
-                                            onChange={(e) => {
-                                                const file = e.target.files?.[0];
-                                                if (file) setValue('profilePic', file, { shouldValidate: true });
-                                            }}
-                                            className="w-full cursor-pointer file:cursor-pointer border border-gray-300 accent-[#76091F] outline-none text-[#76091F] rounded-lg file:bg-[#76091F] file:text-white file:p-2 file:px-3"
-                                        />
-                                        {errors.profilePic && <p className="text-red-500 text-xs">{errors.profilePic.message}</p>}
+                                        <label className='mr-auto'>
+                                            <div className='w-20 h-20 md:w-24 md:h-24 flex flex-col justify-center items-center gap-1 border border-dashed border-black rounded-full'>
+                                                {
+                                                    previewUrl ?
+                                                        <img src={previewUrl} alt="Profile Pic" className='w-full h-full rounded-full' /> :
+                                                        <>
+                                                            <PiUploadSimpleBold fontSize={20} />
+                                                            <span className='text-sm'>Upload</span>
+                                                        </>
+                                                }
+                                            </div>
+                                            <input
+                                                hidden
+                                                type="file"
+                                                accept="image/*"
+                                                disabled={!isEdit}
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) setValue('profilePic', file, { shouldValidate: true });
+                                                }}
+                                                className="w-full cursor-pointer file:cursor-pointer border border-gray-300 accent-[#76091F] outline-none text-[#76091F] rounded-lg file:bg-[#76091F] file:text-white file:p-2 file:px-3"
+                                            />
+                                            {errors.profilePic && <p className="text-red-500 text-xs">{errors.profilePic.message}</p>}
+                                        </label>
                                     </div>
                                 </div>
                             </div>

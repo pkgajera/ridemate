@@ -6,10 +6,11 @@ import axios from 'axios'
 import { useAuth } from '../context/AllContext';
 import { toast } from 'react-toastify';
 import { NavLink, useNavigate } from 'react-router-dom';
+import Modal from '../components/Modal';
 
 const Login = () => {
 
-    const { userBackendUrl, storeTokenInLs } = useAuth();
+    const { RidemateLogo, userBackendUrl, storeTokenInLs } = useAuth();
 
     const navigate = useNavigate();
 
@@ -33,6 +34,24 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false)
     const [isReadPrivacyPolicy, setIsReadPrivacyPolicy] = useState(false)
     const [error, setError] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+
+    const forgetPasswordObj = {
+        emailMobile: '',
+        oldPassword: '',
+        newPassword: '',
+        verifyNewPassword: ''
+    }
+
+    const showForgetPasswordObj = {
+        oldPassword: false,
+        newPassword: false,
+        verifyNewPassword: false
+    }
+
+    const [forgetPassword, setForgetPassword] = useState(forgetPasswordObj)
+    const [showForgetPassword, setShowForgetPassword] = useState(showForgetPasswordObj)
+    const [forgetPasswordErr, setForgetPasswordErr] = useState('');
 
     const loginInput = [
         {
@@ -167,6 +186,43 @@ const Login = () => {
         }
     }
 
+    const handleModalClose = () => {
+        setIsOpen(false)
+        setForgetPassword(forgetPasswordObj)
+        setForgetPasswordErr('')
+    }
+
+    const handleResetPassword = async () => {
+        try {
+            if (!forgetPassword.emailMobile) {
+                return setForgetPasswordErr("Email or mobile required.")
+            } else if (!forgetPassword.oldPassword) {
+                return setForgetPasswordErr("Old password required.")
+            } else if (!forgetPassword.newPassword) {
+                return setForgetPasswordErr("New password required.")
+            } else if (!forgetPassword.verifyNewPassword) {
+                return setForgetPasswordErr("Verify New Password required.")
+            } else if ((forgetPassword.newPassword && forgetPassword.verifyNewPassword) && (forgetPassword.newPassword !== forgetPassword.verifyNewPassword)) {
+                return setForgetPasswordErr("New and Verify New password should be same")
+            } else {
+                setForgetPasswordErr("");
+                const response = await axios.post(`${userBackendUrl}/api/user/forgetPassword`, {
+                    emailMobile: forgetPassword.emailMobile,
+                    oldPassword: forgetPassword.oldPassword,
+                    newPassword: forgetPassword.newPassword,
+                    verifyNewPassword: forgetPassword.verifyNewPassword,
+                })
+
+                if (response.data.status) {
+                    toast.success(response.data.message);
+                    handleModalClose();
+                }
+            }
+        } catch (error) {
+            error?.response && toast.error(error?.response?.data?.message)
+        }
+    }
+
     return (
         <>
             <div className="min-h-[100vh] w-full flex justify-center items-center overflow-x-hidden bg-cover bg-no-repeat" style={{ backgroundImage: `url(${LoginSignUp})` }}>
@@ -179,7 +235,7 @@ const Login = () => {
                     </div>
                     <div className="w-full md:w-1/2 h-full flex justify-center items-center">
                         <div className="w-full max-h-[100svh] overflow-y-auto py-6 sm:py-8 px-4 sm:px-6 flex flex-col items-center gap-8" style={{ scrollbarWidth: 'none' }}>
-                            <p className="text-2xl font-semibold">Logo</p>
+                            <img src={RidemateLogo} alt={"RidemateLogo"} className='w-40' />
 
                             <div className="w-full max-w-xl border border-gray-300 rounded-2xl p-5 sm:p-6 md:p-8 flex flex-col gap-6 sm:gap-10">
                                 <div className="text-center">
@@ -221,7 +277,7 @@ const Login = () => {
                                     ))}
                                     {login ? (
                                         <div className="text-right">
-                                            <NavLink className="text-xs sm:text-sm font-medium text-[#76091F]">Forgot Password?</NavLink>
+                                            <button onClick={() => setIsOpen(true)} className="text-xs sm:text-sm font-medium text-[#76091F] cursor-pointer">Forgot Password?</button>
                                         </div>
                                     ) : (
                                         <label className="text-sm text-black/90 flex items-start gap-2">
@@ -249,6 +305,7 @@ const Login = () => {
                                         <button
                                             onClick={() => {
                                                 setLogin(!login);
+                                                handleModalClose();
                                                 setError("");
                                             }}
                                             className="text-[#76091F] font-medium cursor-pointer hover:underline"
@@ -262,6 +319,86 @@ const Login = () => {
                     </div>
                 </div>
             </div>
+            <Modal isOpen={isOpen} onClose={handleModalClose}>
+                <div className='w-full flex flex-col gap-5'>
+                    <h2 className='font-medium text-lg'>Forgot Password</h2>
+                    <div className='w-full flex flex-col gap-1'>
+                        <label className="text-xs sm:text-sm font-medium text-black/60 flex gap-1">
+                            Enter Email or Mobile <span className="text-[#76091F]">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            className={`w-full bg-gray-200 p-2 input-no-spinner rounded-lg text-sm text-[#76091F] outline-none border border-gray-200 focus:border-[#76091F]`}
+                            value={forgetPassword.emailMobile}
+                            onChange={(e) => setForgetPassword({ ...forgetPassword, emailMobile: e.target.value })}
+                        />
+                    </div>
+                    <div className='w-full flex flex-col gap-1'>
+                        <label className="text-xs sm:text-sm font-medium text-black/60 flex gap-1">
+                            Enter Old password <span className="text-[#76091F]">*</span>
+                        </label>
+                        <div className="relative">
+                            <input
+                                type={showForgetPassword?.oldPassword ? "text" : "password"}
+                                className={`w-full bg-gray-200 p-2 sm:p-3 input-no-spinner pr-10 rounded-lg text-sm text-[#76091F] outline-none border border-gray-200 focus:border-[#76091F]`}
+                                value={forgetPassword.oldPassword}
+                                onChange={(e) => setForgetPassword({ ...forgetPassword, oldPassword: e.target.value })}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowForgetPassword({ ...showForgetPassword, oldPassword: !showForgetPassword.oldPassword })}
+                                className="absolute top-1/2 right-3 transform -translate-y-1/2"
+                            >
+                                {showForgetPassword?.oldPassword ? <GoEyeClosed color="#76091F" size={20} /> : <RxEyeOpen color="#76091F" size={20} />}
+                            </button>
+                        </div>
+                    </div>
+                    <div className='w-full flex flex-col gap-1'>
+                        <label className="text-xs sm:text-sm font-medium text-black/60 flex gap-1">
+                            Enter New password <span className="text-[#76091F]">*</span>
+                        </label>
+                        <div className="relative">
+                            <input
+                                type={showForgetPassword?.newPassword ? "text" : "password"}
+                                className={`w-full bg-gray-200 p-2 sm:p-3 input-no-spinner pr-10 rounded-lg text-sm text-[#76091F] outline-none border border-gray-200 focus:border-[#76091F]`}
+                                value={forgetPassword.newPassword}
+                                onChange={(e) => setForgetPassword({ ...forgetPassword, newPassword: e.target.value })}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowForgetPassword({ ...showForgetPassword, newPassword: !showForgetPassword.newPassword })}
+                                className="absolute top-1/2 right-3 transform -translate-y-1/2"
+                            >
+                                {showForgetPassword?.newPassword ? <GoEyeClosed color="#76091F" size={20} /> : <RxEyeOpen color="#76091F" size={20} />}
+                            </button>
+                        </div>
+                    </div>
+                    <div className='w-full flex flex-col gap-1'>
+                        <label className="text-xs sm:text-sm font-medium text-black/60 flex gap-1">
+                            Verify New password <span className="text-[#76091F]">*</span>
+                        </label>
+                        <div className="relative">
+                            <input
+                                type={showForgetPassword?.verifyNewPassword ? "text" : "password"}
+                                className={`w-full bg-gray-200 p-2 sm:p-3 input-no-spinner pr-10 rounded-lg text-sm text-[#76091F] outline-none border border-gray-200 focus:border-[#76091F]`}
+                                value={forgetPassword.verifyNewPassword}
+                                onChange={(e) => setForgetPassword({ ...forgetPassword, verifyNewPassword: e.target.value })}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowForgetPassword({ ...showForgetPassword, verifyNewPassword: !showForgetPassword.verifyNewPassword })}
+                                className="absolute top-1/2 right-3 transform -translate-y-1/2"
+                            >
+                                {showForgetPassword?.verifyNewPassword ? <GoEyeClosed color="#76091F" size={20} /> : <RxEyeOpen color="#76091F" size={20} />}
+                            </button>
+                        </div>
+                    </div>
+                    {forgetPasswordErr && <p className="text-red-500 text-xs">{forgetPasswordErr}</p>}
+                    <div className='w-full flex justify-end items-center'>
+                        <button className='p-1.5 px-4 bg-[#76091F] text-white rounded-lg hover:opacity-90 transition cursor-pointer' onClick={handleResetPassword}>Reset</button>
+                    </div>
+                </div>
+            </Modal>
         </>
     )
 }

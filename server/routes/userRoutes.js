@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { login, register, checkProfile, updateMissingDetails, getAllUSers, getUser, fetchNearbyUsers, sendConnectionRequest, acceptConnection, getNotificationsCounts, getNotifications, getConversations, getMessages, toggleUserVisibility, checkVisibility } = require('../controller/userController');
+const { login, register, checkProfile, updateMissingDetails, getAllUSers, getUser, fetchNearbyUsers, sendConnectionRequest, acceptConnection, getNotificationsCounts, getNotifications, getConversations, getMessages, toggleUserVisibility, checkVisibility, forgetPassword } = require('../controller/userController');
 const upload = require('../fileUpload');
 
 router.post('/login', login);
@@ -22,5 +22,7 @@ router.get('/getMessages', getMessages)
 
 router.get('/checkVisibility/:userId', checkVisibility)
 router.get('/toggleUserVisibility', toggleUserVisibility)
+
+router.post('/forgetPassword', forgetPassword)
 
 module.exports = router;

@@ -8,6 +8,7 @@ import axios from "axios";
 import moment from 'moment';
 import { FaChevronDown } from "react-icons/fa6";
 import LoadingSpinner from "../components/LoadingSpinner";
+import { useLocation } from "react-router-dom";
 
 const UserListContent = ({ users, selectedUser, setSelectedUser, isMobileMenuOpen, setIsMobileMenuOpen, searchQuery, setSearchQuery, userBackendUrl, loading }) => {
     const filteredUsers = users.filter((user) =>
@@ -97,6 +98,10 @@ const UserListContent = ({ users, selectedUser, setSelectedUser, isMobileMenuOpe
 
 const Chat = () => {
 
+    const { search } = useLocation();
+    const queryParams = new URLSearchParams(search);
+    const userId = queryParams.get("userId");
+
     const { Authorization, userBackendUrl } = useAuth();
 
     const [users, setUsers] = useState([])
@@ -147,17 +152,13 @@ const Chat = () => {
         }
     }
 
-    const fetchMessages = async (before = null) => {
+    const fetchMessages = async () => {
         try {
             setLoadingMessages(true);
 
             const params = {
                 user1: currentUserId,
                 user2: selectedUser?._id,
-            }
-
-            if (before) {
-                params.before = before
             }
 
             const response = await axios.get(`${userBackendUrl}/api/user/getMessages`, { headers: { Authorization }, params });

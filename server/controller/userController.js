@@ -682,7 +682,7 @@ exports.getConversations = async (req, res) => {
 
 exports.getMessages = async (req, res) => {
     try {
-        const { user1, user2, before, limit = 20 } = req.query;
+        const { user1, user2, limit = 20 } = req.query;
 
         const query = {
             $or: [
@@ -691,11 +691,7 @@ exports.getMessages = async (req, res) => {
             ],
         }
 
-        if (before) {
-            query.createdAt = { $lt: new Date(before) };
-        }
-
-        const messages = await Chat.find(query).sort({ createdAt: -1 }).limit(limit);
+        const messages = await Chat.find(query).sort({ createdAt: -1 })
 
         return res.status(200).json({
             status: true,
@@ -746,6 +742,41 @@ exports.toggleUserVisibility = async (req, res) => {
 
         return res.status(200).json({ status: true, message: "Visibility changed successfully." });
 
+    } catch (error) {
+        return res.status(500).json({ status: false, message: error?.message })
+    }
+}
+
+exports.forgetPassword = async (req, res) => {
+    try {
+        const { emailMobile, oldPassword, newPassword, verifyNewPassword } = req.body;
+
+        if (!emailMobile || !oldPassword || !newPassword || !verifyNewPassword) {
+            return res.status(400).json({ status: false, message: "Required missing fields: emailMobile, oldPassword, newPassword or verifyNewPassword" });
+        }
+
+        if (newPassword !== verifyNewPassword) {
+            return res.status(401).json({ status: false, message: "New and verify new password should be same." })
+        }
+
+        const isEmail = emailMobile.includes('@');
+
+        const user = await User.findOne({ [isEmail ? 'userEmail' : 'userMobile']: emailMobile });
+        if (!user) {
+            return res.status(404).json({ status: false, message: "User not found." });
+        }
+
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ status: false, message: "Old password is incorrect" });
+        }
+
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+        user.password = hashedNewPassword;
+        await user.save();
+
+        return res.status(200).json({ status: true, message: "Password changed successfully" });
     } catch (error) {
         return res.status(500).json({ status: false, message: error?.message })
     }

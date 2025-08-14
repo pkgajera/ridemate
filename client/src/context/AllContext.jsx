@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from 'axios';
 import { decodeJWT } from "../pages/helper";
+import RidemateLogo from '../assets/ridemateLight.png';
 
 const AuthContext = createContext();
 
@@ -53,21 +54,6 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
-    const values = {
-        Authorization,
-        isLoggedIn,
-        userBackendUrl,
-        storeTokenInLs,
-        logout,
-        sidebarOpen,
-        toggleSidebar,
-        setSidebarOpen,
-        olaMapApiKey,
-        olaMapApi,
-        notificationCount,
-        fetchNotificationCounts
-    }
-
     const handleResize = () => {
         if (window.innerWidth >= 768) {
             setSidebarOpen(false);
@@ -86,6 +72,22 @@ export const AuthProvider = ({ children }) => {
 
         return () => window.removeEventListener('resize', handleResize);
     }, [])
+
+    const values = {
+        Authorization,
+        isLoggedIn,
+        userBackendUrl,
+        storeTokenInLs,
+        logout,
+        sidebarOpen,
+        toggleSidebar,
+        setSidebarOpen,
+        olaMapApiKey,
+        olaMapApi,
+        notificationCount,
+        fetchNotificationCounts,
+        RidemateLogo
+    }
 
     return (
         <AuthContext.Provider value={values}>

@@ -10,7 +10,7 @@ import { toast } from 'react-toastify';
 
 const Header = () => {
 
-    const { userBackendUrl, logout, toggleSidebar, notificationCount, Authorization } = useAuth();
+    const { RidemateLogo, userBackendUrl, logout, toggleSidebar, notificationCount, Authorization } = useAuth();
     const [isChecked, setIsChecked] = useState(false);
     const [currentUserId, setCurrentUserId] = useState('');
 
@@ -100,9 +100,9 @@ const Header = () => {
     return (
         <>
             <div className='w-screen h-18 flex justify-between items-center border-b border-b-gray-200 shadow p-3'>
-                <div className='text-[#76091F] text-2xl font-semibold'>
-                    <NavLink to={"/"}>LOGO</NavLink>
-                </div>
+                <NavLink to={"/"} className={"w-32 sm:w-40"}>
+                    <img src={RidemateLogo} alt="Ridemate logo" className='w-full h-auto' />
+                </NavLink>
                 <nav className='hidden md:flex justify-center items-center gap-6 uppercase font-medium mainHeader'>
                     {
                         navigationLinks?.map((nav, index) => {
