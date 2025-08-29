@@ -7,6 +7,7 @@ import { GiHamburgerMenu } from "react-icons/gi";
 import axios from 'axios';
 import { decodeJWT } from '../pages/helper';
 import { toast } from 'react-toastify';
+import { RiShareFill } from "react-icons/ri";
 
 const Header = () => {
 
@@ -52,6 +53,14 @@ const Header = () => {
             link: '/chat'
         },
     ]
+
+    const sendMessageToRN = (data) => {
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            window.ReactNativeWebView.postMessage(JSON.stringify(data));
+        } else {
+            console.log("Not inside React Native WebView");
+        }
+    }
 
     const checkUserVisibility = async () => {
         try {
@@ -124,6 +133,7 @@ const Header = () => {
                     </button>
                 </nav>
                 <div className='flex items-center gap-3 md:hidden'>
+                    <button onClick={() => sendMessageToRN({ type: "SHARE", status: true })}><RiShareFill fontSize={24} /></button>
                     <div
                         onClick={toggleUserVisibility}
                         className={`relative flex items-center cursor-pointer rounded-full w-14 h-7 transition-all duration-300 ease-in-out ${isChecked ? 'bg-green-500' : 'bg-red-500'}`}
@@ -134,10 +144,13 @@ const Header = () => {
                     </div>
                     <button className='md:hidden' onClick={toggleSidebar}><GiHamburgerMenu fontSize={24} /></button>
                 </div>
-                <button onClick={handleLogout} className='hidden md:flex justify-center items-center gap-3 text-white bg-[#76091F] hover:bg-[#76091F]/90 px-6 py-3 rounded-lg cursor-pointer'>
-                    <IoMdLogOut fontSize={24} />
-                    <span>Logout</span>
-                </button>
+                <div className='hidden md:flex items-center gap-5'>
+                    <button onClick={() => sendMessageToRN({ type: "SHARE", status: true })}><RiShareFill fontSize={24} /></button>
+                    <button onClick={handleLogout} className='hidden md:flex justify-center items-center gap-3 text-white bg-[#76091F] hover:bg-[#76091F]/90 px-6 py-3 rounded-lg cursor-pointer'>
+                        <IoMdLogOut fontSize={24} />
+                        <span>Logout</span>
+                    </button>
+                </div>
             </div>
         </>
     )
